@@ -4,7 +4,6 @@ from pathlib import Path
 import flair
 import torch
 
-from flair.datasets import ColumnCorpus
 from flair.data import Corpus
 from flair.models import SequenceTagger
 from flair.embeddings import (
