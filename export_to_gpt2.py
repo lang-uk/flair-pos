@@ -7,6 +7,30 @@ import flair
 from train_grid import UD_UKRAINIAN
 
 
+# As per: https://github.com/lang-uk/lang.org.ua/blob/master/languk/corpus/ud_converter.py#L10
+_UPOS_MAPPING = [
+    ("NOUN", "N"),  # 4130481
+    ("VERB", "V"),  # 3345193
+    ("ADP", "a"),  # 1851693
+    ("ADV", "A"),  # 1651200
+    ("PRON", "P"),  # 1525969
+    ("ADJ", "J"),  # 1427357
+    ("PART", "p"),  # 1147072
+    ("CCONJ", "C"),  # 1101499
+    ("DET", "D"),  # 873070
+    ("PROPN", "O"),  # 684675
+    ("SCONJ", "S"),  # 484188
+    ("X", "X"),  # 175188
+    ("NUM", "n"),  # 96248
+    ("PUNCT", "t"),  # 88265
+    ("INTJ", "I"),  # 61924
+    ("SYM", "s"),  # 415
+    ("AUX", "x"),  # 275
+]
+
+COMPRESS_UPOS_MAPPING = dict(_UPOS_MAPPING)
+
+
 class AlignedToken(namedtuple("AlignedToken", ("token", "orig_pos", "new_pos"))):
     """
     As we do changing the whitespaces in tokenized text according to the punctuation rules,
@@ -83,6 +107,22 @@ def convert_sentence(sentence: flair.data.Sentence, prefix_text: str = "рече
     return prefix_text + final_sentence + "\n" + "\n".join(tagged)
 
 
+def convert_sentence_inline(
+    sentence: flair.data.Sentence, prefix_text: str = "речення: ", annotation: str = "анотація: ", label="upos"
+) -> str:
+    words: List[str] = []
+    tagged: List[str] = []
+
+    for w in sentence:
+        words.append(w.text)
+        tagged.append(w.text)
+        tagged.append("/" + COMPRESS_UPOS_MAPPING[w.get_label(label).value])
+
+    final_sentence: str = "".join(map(str, reconstruct_tokenized([words])))
+    final_tagged_sentence: str = "".join(map(str, reconstruct_tokenized([tagged])))
+    return prefix_text + final_sentence + "\n" + annotation + final_tagged_sentence
+
+
 if __name__ == "__main__":
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Convert UD dataset for Ukrainian to "
@@ -90,12 +130,16 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("outdir", type=pathlib.Path, help="Output directory to store dev/train/test")
+    parser.add_argument("--format", default="inline", choices=["inline", "post"])
 
     corpus = UD_UKRAINIAN()
     args: argparse.Namespace = parser.parse_args()
 
     for split in ["dev", "train", "test"]:
-        outfile = args.outdir / (split + ".gpt2.txt")
+        outfile = args.outdir / (split + f".{args.format}.gpt2.txt")
         with outfile.open("w") as fp_out:
             for sentence in getattr(corpus, split):
-                fp_out.write(convert_sentence(sentence) + "\n\n")
+                if args.format == "inline":
+                    fp_out.write(convert_sentence_inline(sentence) + "\n\n")
+                else:
+                    fp_out.write(convert_sentence(sentence) + "\n\n")
