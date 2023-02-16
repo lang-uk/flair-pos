@@ -115,11 +115,14 @@ def convert_sentence_inline(
 
     for w in sentence:
         words.append(w.text)
+
+        tag: str = COMPRESS_UPOS_MAPPING[w.get_label(label).value]
+
         tagged.append(w.text)
-        tagged.append("/" + COMPRESS_UPOS_MAPPING[w.get_label(label).value])
+        tagged.append(f"/{tag}")
 
     final_sentence: str = "".join(map(str, reconstruct_tokenized([words])))
-    final_tagged_sentence: str = "".join(map(str, reconstruct_tokenized([tagged])))
+    final_tagged_sentence: str = " ".join(tagged)
     return prefix_text + final_sentence + "\n" + annotation + final_tagged_sentence
 
 
